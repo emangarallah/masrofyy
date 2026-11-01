@@ -6,7 +6,8 @@ import 'package:go_router/go_router.dart';
 
 import '../../features/auth/repository/auth_repository.dart';
 import '../../features/auth/view/pages/auth_page.dart';
-import '../../features/depts/view/pages/depts_page.dart';
+import '../../features/depts/view/pages/debts_page.dart';
+
 import '../../features/goals/view/pages/goals_page.dart';
 import '../../features/home/view/pages/home_page.dart';
 import '../../features/income/view/pages/income_page.dart';
@@ -31,7 +32,7 @@ final routerProvider = Provider<GoRouter>((ref) {
      GoRoute(path: AppRoutes.auth, builder: (context, state) => AuthPage()),
       GoRoute(path: AppRoutes.home, builder: (context, state) => HomePage()),
       GoRoute(path: AppRoutes.goals, builder: (context, state) => GoalsPage()),
-       GoRoute(path: AppRoutes.depts, builder: (context, state) =>  DeptsPage()),
+       GoRoute(path: AppRoutes.depts, builder: (context, state) =>  DebtsPage()),
       GoRoute(path: AppRoutes.income, builder: (context, state) =>  IncomePage()),
 
 
