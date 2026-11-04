@@ -20,7 +20,7 @@ class _HomePageState extends State<HomePage> {
     HomeTab(),
     ReportsTab(),
     SizedBox.shrink(), // FAB Placeholder
-    ExpensesTab(),
+    TransactionsTab(),
     MoreTab(),
   ];
 

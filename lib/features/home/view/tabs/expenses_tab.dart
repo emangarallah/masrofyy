@@ -1,87 +1,56 @@
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:masrofyy/core/extensions/build_context.dart';
+import 'package:masrofyy/features/expenses/controller/expense_controller.dart';
+import 'package:masrofyy/features/expenses/view/widgets/months_list.dart';
 
 import '../../../../core/constants/app_assets.dart';
+import '../../../../core/constants/data.dart';
 import '../../../../core/extensions/num_extension.dart';
 import '../../../../core/extensions/widget_extension.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_sizes.dart';
+import '../../../expenses/models/expense_entry_model.dart';
 
 
-class ExpensesTab extends StatelessWidget {
-  const ExpensesTab({super.key});
+class TransactionsTab extends ConsumerStatefulWidget {
+  const TransactionsTab({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final isDark = context.isDarkMode;
+  ConsumerState<TransactionsTab> createState() => _TransactionsTabState();
+}
 
-    final List<Map<String, dynamic>> groups = [
-      {
-        'date': 'اليوم',
-        'items': [
-          {
-            'title': 'مطعم',
-            'subtitle': 'غداء مع الأصدقاء',
-            'time': '12:30 م',
-            'amount': '180',
-            'icon': Icons.restaurant_rounded,
-            'iconColor': AppColors.expense,
-            'isHighlighted': true,
-          },
-          {
-            'title': 'مواصلات',
-            'subtitle': 'مترو',
-            'time': '08:15 ص',
-            'amount': '20',
-            'icon': Icons.directions_car_rounded,
-            'iconColor': AppColors.blue,
-            'isHighlighted': false,
-          },
-          {
-            'title': 'قهوة',
-            'subtitle': 'ستاربكس',
-            'time': '07:45 ص',
-            'amount': '45',
-            'icon': Icons.local_cafe_rounded,
-            'iconColor': AppColors.orange,
-            'isHighlighted': false,
-          },
-          {
-            'title': 'تسوق',
-            'subtitle': 'من السوبر ماركت',
-            'time': '06:30 م',
-            'amount': '215',
-            'icon': Icons.shopping_bag_rounded,
-            'iconColor': AppColors.success,
-            'isHighlighted': false,
-          },
-        ],
-      },
-      {
-        'date': 'أمس',
-        'items': [
-          {
-            'title': 'فواتير',
-            'subtitle': 'فاتورة الكهرباء',
-            'time': '4:30 م',
-            'amount': '350',
-            'icon': Icons.electric_bolt_rounded,
-            'iconColor': AppColors.purple,
-            'isHighlighted': true,
-          },
-          {
-            'title': 'تسوق',
-            'subtitle': 'ملابس',
-            'time': '2:15 م',
-            'amount': '320',
-            'icon': Icons.shopping_bag_rounded,
-            'iconColor': AppColors.success,
-            'isHighlighted': false,
-          },
-        ],
-      },
-    ];
+class _TransactionsTabState extends ConsumerState<TransactionsTab> {
+  int _setMonth = DateTime.now().month;
+  int _setYear = DateTime.now().year;
+  @override
+  Widget build(BuildContext context) {
+    final expensecontroller = ref.watch(expenseControllerProvider);
+    final isDark = context.isDarkMode;
+    String formatDatelLabel(DateTime date, bool isArabic){
+      final now = DateTime.now();
+      final today = DateTime(now.year,now.month,now.day);
+      final yesterday = today.subtract(const Duration(days: 1));
+      final checkDate = DateTime(date.year,date.month,date.day);
+      if(checkDate == today){
+        return 'اليوم';
+
+      }else if (checkDate == yesterday){
+        return 'امس';
+      }else{
+        return DateFormat('d MMM YYYY','ar').format(date);
+      }
+    }
+
+
+
+
+
+
+
+
 
     return SingleChildScrollView(
       child: Column(
@@ -90,75 +59,67 @@ class ExpensesTab extends StatelessWidget {
           Text("المعاملات", style: context.textTheme.titleLarge).center(),
           AppSizes.m.verticalSpace,
 
+
           // Summary Card
-          const _ExpensesSummaryCard(),
-          AppSizes.m.verticalSpace,
+          expensecontroller.when(data: (data){
+            final filterd = data.where((e)=> e.month == _setMonth && e.year == _setYear).toList();
+            filterd.sort((a,b)=> b.date.compareTo(a.date));
+            final totalExpenses = filterd.fold<double>(0, (sum,e) => sum + e.amount);
 
-          // List of groups
-          ListView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: groups.length,
-            itemBuilder: (context, groupIndex) {
-              final group = groups[groupIndex];
-              final date = group['date'] as String;
-              final items = group['items'] as List<Map<String, dynamic>>;
+            // Fixed: Converted the Set to a List<String> using .toList()
+            final List<String> keys = {
+              '${DateTime.now().year}-${DateTime.now().month.toString().padLeft(2,'0')}',
+              ...data.map((e)=> e.monthYear),
+            }.toList()..sort((a,b)=>b.compareTo(a));
 
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  // Group Date Label
-                  Text(
-                    date,
-                    style: context.textTheme.bodySmall?.copyWith(
-                      color: isDark
-                          ? AppColors.textSecondaryDark
-                          : AppColors.textSecondaryLight,
-                      fontWeight: FontWeight.bold,
-                    ),
-                    textAlign: TextAlign.right,
-                  ).paddingAll(AppSizes.s),
+            final Map<String,List<ExpenseEntryModel>> group ={};
+            for(var entrry in filterd){
+              final label = formatDatelLabel(entrry.date, true);
+              if(!group.containsKey(label)){
+                group[label] = [];
 
-                  // Group Card Wrapper
-                  Container(
-                    decoration: BoxDecoration(
-                      color: isDark ? AppColors.cardDark : Colors.white,
-                      borderRadius: AppSizes.rL.radius,
-                      border: Border.all(
-                        color: isDark
-                            ? AppColors.borderDark
-                            : AppColors.borderLight,
-                      ),
-                    ),
-                    child: ListView.separated(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      itemCount: items.length,
-                      separatorBuilder: (context, index) => Divider(
-                        height: 1,
-                        thickness: 0.5,
-                        color: isDark
-                            ? AppColors.dividerDark
-                            : AppColors.dividerLight,
-                      ),
-                      itemBuilder: (context, itemIndex) {
-                        final item = items[itemIndex];
-                        return _TransactionItem(
-                          title: item['title'] as String,
-                          subtitle: item['subtitle'] as String,
-                          time: item['time'] as String,
-                          amount: item['amount'] as String,
-                          icon: item['icon'] as IconData,
-                          iconColor: item['iconColor'] as Color,
-                          isHighlighted: item['isHighlighted'] as bool,
-                        );
-                      },
-                    ),
-                  ),
-                ],
-              );
-            },
-          ),
+              }
+              group[label]!.add(entrry);
+
+            }
+
+
+
+
+
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+
+                _ExpensesSummaryCard(total: totalExpenses.toString(),
+                  monthLabel:"${months[_setMonth -1]}-$_setYear",
+                ),
+                AppSizes.l.verticalSpace,
+                MonthsList(monthYearKeys: keys,
+                  selectedMonth: _setMonth,
+                  selectedYear: _setYear,
+                  activeColor: AppColors.expense,
+                  onMonthSelected: (m,y)=> setState(() {
+                    _setMonth = m;
+                    _setYear = y;
+                  }),),
+
+
+              ],
+
+            );
+
+
+
+
+          }, error: (err,stack)=> Text(
+            'تعذر تحميل المصروفات',style: context.textTheme.bodyMedium,
+
+          ).center().paddingAll(AppSizes.xl),
+            loading: () => CircularProgressIndicator.adaptive().center().paddingAll(AppSizes.xl),),
+
+
+
         ],
       ).paddingAll(AppSizes.screenPadding),
     );
@@ -166,7 +127,9 @@ class ExpensesTab extends StatelessWidget {
 }
 
 class _ExpensesSummaryCard extends StatelessWidget {
-  const _ExpensesSummaryCard();
+  const _ExpensesSummaryCard({required this.total, required this.monthLabel});
+  final String total;
+  final String monthLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -203,7 +166,7 @@ class _ExpensesSummaryCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.baseline,
                 textBaseline: TextBaseline.alphabetic,
                 children: [
-                  Text('3,850', style: context.textTheme.headlineMedium),
+                  Text(total, style: context.textTheme.headlineMedium),
                   AppSizes.s.horizontalSpace,
                   Text('EGP', style: context.textTheme.titleMedium),
                 ],
@@ -225,7 +188,7 @@ class _ExpensesSummaryCard extends StatelessWidget {
                       size: 16,
                     ),
                     AppSizes.xs.horizontalSpace,
-                    Text('هذا الشهر', style: context.textTheme.bodySmall),
+                    Text(monthLabel, style: context.textTheme.bodySmall),
                   ],
                 ),
               ),
